@@ -1,5 +1,6 @@
 # 📈 프로젝트: 러브버그 예보 (Project: Lovebug Forecasting)
 ### AI 기반 붉은등우단털파리(러브버그) 대발생 예측 플랫폼
+<img width="942" height="939" alt="image" src="https://github.com/user-attachments/assets/d8c9b851-159a-44b3-aa3e-ebad9c0d3f14" />
 
 **「2025년 산림분야 빅데이터·AI 활용 창업 경진대회」 아이디어 기획 부문 출품작**
 
