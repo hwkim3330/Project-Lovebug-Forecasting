@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lovebug Map - AI Forecasting Dashboard</title>
+    
+    <!-- Leaflet.js (지도 라이브러리) CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+     crossorigin=""/>
+     
+    <!-- Font Awesome (아이콘 라이브러리) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" 
+    integrity="sha512-SnH5WK+bZxgPHs44uWIX+LLJAJ9/2PkPKZ5QiAj6Ta86w+fsb2TkcmfRyVX3pBnMFcV7oQPJkl9QevSCWr3W6A==" 
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <style>
+        /* 기본 스타일 및 폰트 설정 */
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f0f2f5;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* 전체 레이아웃 */
+        .container {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 사이드바 스타일 */
+        .sidebar {
+            width: 350px;
+            background-color: #ffffff;
+            padding: 20px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            color: #1a237e;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .header h1 i {
+            margin-right: 10px;
+            color: #d32f2f;
+        }
+        .header p {
+            font-size: 14px;
+            color: #555;
+            margin: 5px 0 0;
+        }
+
+        .dashboard-info {
+            font-size: 14px;
+            color: #666;
+            background-color: #e8eaf6;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .info-item span:first-child {
+            font-weight: 500;
+        }
+
+        #current-time {
+            font-weight: 700;
+            color: #3f51b5;
+        }
+
+        .hotspot-list h2 {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #3f51b5;
+            padding-bottom: 5px;
+        }
+
+        .hotspot-item {
+            background-color: #f9f9f9;
+            border: 1px solid #eee;
+            border-left: 5px solid;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .hotspot-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+        }
+
+        .hotspot-item.danger { border-left-color: #d32f2f; }
+        .hotspot-item.warning { border-left-color: #f57c00; }
+        .hotspot-item.moderate { border-left-color: #fdd835; }
+
+        .item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-header .name {
+            font-weight: 700;
+            font-size: 16px;
+        }
+        
+        .item-header .rank {
+            background-color: #333;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .item-details {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .risk-score {
+            font-weight: 700;
+        }
+        
+        .risk-score.danger { color: #d32f2f; }
+        .risk-score.warning { color: #f57c00; }
+        .risk-score.moderate { color: #b49300; }
+
+
+        /* 메인 컨텐츠 (지도) 스타일 */
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 지도 위 정보 창 스타일 */
+        .map-info-panel {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .map-info-panel h3 {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+        .legend {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        .legend li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 5px;
+            font-size: 14px;
+        }
+        .legend i {
+            width: 18px;
+            height: 18px;
+            margin-right: 8px;
+            border-radius: 50%;
+            opacity: 0.8;
+        }
+
+        /* 로딩 스피너 */
+        .loader {
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          border: 5px solid #f3f3f3;
+          border-radius: 50%;
+          border-top: 5px solid #3498db;
+          width: 50px;
+          height: 50px;
+          animation: spin 1s linear infinite;
+          z-index: 2000;
+        }
+
+        @keyframes spin {
+          0% { transform: translate(-50%, -50%) rotate(0deg); }
+          100% { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 사이드바 -->
+        <div class="sidebar">
+            <div class="header">
+                <h1><i class="fa-solid fa-bug-slash"></i> Lovebug Map</h1>
+                <p>AI 기반 러브버그 출몰 예측 대시보드</p>
+            </div>
+
+            <div class="dashboard-info">
+                <div class="info-item">
+                    <span>데이터 기준일:</span>
+                    <span id="current-date"></span>
+                </div>
+                <div class="info-item">
+                    <span>현재 시각:</span>
+                    <span id="current-time"></span>
+                </div>
+                 <div class="info-item">
+                    <span>예측 기간:</span>
+                    <span>2025.07.17 ~ 2025.07.24</span>
+                </div>
+            </div>
+
+            <div class="hotspot-list">
+                <h2><i class="fa-solid fa-triangle-exclamation"></i> 금주 Top 5 위험 지역</h2>
+                <div id="hotspot-container">
+                    <!-- 핫스팟 아이템이 JS로 동적 생성됩니다. -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 메인 컨텐츠 (지도) -->
+        <div class="main-content">
+            <div id="map"></div>
+            <div id="loader" class="loader"></div>
+            
+            <div class="map-info-panel">
+                <h3>위험도 범례</h3>
+                <ul class="legend">
+                    <li><i style="background: #d32f2f;"></i> 위험 (80-100)</li>
+                    <li><i style="background: #f57c00;"></i> 경계 (60-79)</li>
+                    <li><i style="background: #fdd835;"></i> 주의 (40-59)</li>
+                    <li><i style="background: #7cb342;"></i> 보통 (20-39)</li>
+                    <li><i style="background: #43a047;"></i> 낮음 (0-19)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Leaflet.js (지도 라이브러리) JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+     crossorigin=""></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // --- 1. 시간 및 날짜 업데이트 ---
+            const dateElement = document.getElementById('current-date');
+            const timeElement = document.getElementById('current-time');
+
+            function updateTime() {
+                const now = new Date();
+                dateElement.textContent = now.toLocaleDateString('ko-KR');
+                timeElement.textContent = now.toLocaleTimeString('ko-KR', { hour12: false });
+            }
+            updateTime();
+            setInterval(updateTime, 1000);
+
+            // --- 2. 지도 초기화 ---
+            const map = L.map('map').setView([37.5665, 126.9780], 11); // 서울 중심부
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            // 로더 숨기기
+            setTimeout(() => {
+                document.getElementById('loader').style.display = 'none';
+            }, 1500);
+
+
+            // --- 3. 가상 데이터 생성 ---
+            // 실제로는 이 데이터를 서버 API로부터 받아옵니다.
+            const dummyData = [
+                { rank: 1, name: '은평구 진관동', score: 95, lat: 37.636, lng: 126.929, type: 'danger' },
+                { rank: 2, name: '강서구 화곡동', score: 88, lat: 37.542, lng: 126.840, type: 'danger' },
+                { rank: 3, name: '마포구 상암동', score: 82, lat: 37.577, lng: 126.892, type: 'danger' },
+                { rank: 4, name: '서대문구 홍은동', score: 75, lat: 37.595, lng: 126.938, type: 'warning' },
+                { rank: 5, name: '양천구 목동', score: 68, lat: 37.527, lng: 126.864, type: 'warning' },
+                { name: '종로구', score: 45, lat: 37.573, lng: 126.979, type: 'moderate' },
+                { name: '강남구', score: 25, lat: 37.517, lng: 127.047, type: 'normal' },
+                { name: '송파구', score: 35, lat: 37.514, lng: 127.106, type: 'normal' },
+                { name: '고양시 덕양구', score: 92, lat: 37.660, lng: 126.836, type: 'danger'},
+            ];
+            
+            // --- 4. 사이드바 Top 5 목록 생성 ---
+            const hotspotContainer = document.getElementById('hotspot-container');
+            dummyData.filter(d => d.rank).sort((a,b) => a.rank - b.rank).forEach(item => {
+                const itemEl = document.createElement('div');
+                itemEl.className = `hotspot-item ${item.type}`;
+                itemEl.innerHTML = `
+                    <div class="item-header">
+                        <span class="name">${item.name}</span>
+                        <span class="rank">#${item.rank}</span>
+                    </div>
+                    <div class="item-details">
+                        위험도 지수: <span class="risk-score ${item.type}">${item.score}</span> 점
+                    </div>
+                `;
+                // 클릭 시 해당 위치로 지도 이동
+                itemEl.addEventListener('click', () => {
+                    map.setView([item.lat, item.lng], 14);
+                });
+                hotspotContainer.appendChild(itemEl);
+            });
+
+            // --- 5. 지도에 위험 지역 표시 (히트맵 대신 원으로 표현) ---
+            function getRiskColor(score) {
+                if (score >= 80) return '#d32f2f';
+                if (score >= 60) return '#f57c00';
+                if (score >= 40) return '#fdd835';
+                if (score >= 20) return '#7cb342';
+                return '#43a047';
+            }
+
+            dummyData.forEach(item => {
+                L.circle([item.lat, item.lng], {
+                    color: getRiskColor(item.score),
+                    fillColor: getRiskColor(item.score),
+                    fillOpacity: 0.5,
+                    radius: item.score * 20 // 점수가 높을수록 원이 커짐
+                }).addTo(map).bindPopup(`<b>${item.name}</b><br>위험도 지수: ${item.score}`);
+            });
+
+            // --- 6. Geolocation API로 현재 위치 표시 ---
+            map.locate({setView: true, maxZoom: 14});
+
+            function onLocationFound(e) {
+                const radius = e.accuracy / 2;
+                L.marker(e.latlng).addTo(map)
+                    .bindPopup("현재 위치").openPopup();
+                L.circle(e.latlng, {
+                    color: '#03a9f4',
+                    fillColor: '#03a9f4',
+                    fillOpacity: 0.2,
+                    radius: radius
+                }).addTo(map);
+            }
+
+            function onLocationError(e) {
+                alert("현재 위치를 가져올 수 없습니다. 브라우저의 위치 정보 접근을 허용해주세요.");
+            }
+
+            map.on('locationfound', onLocationFound);
+            map.on('locationerror', onLocationError);
+        });
+    </script>
+</body>
+</html>
